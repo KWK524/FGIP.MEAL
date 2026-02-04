@@ -32,36 +32,38 @@
         .content { padding: 20px; max-width: 900px; margin: 0 auto; display: none; }
         .content.active { display: block; }
 
-        /* 카드 스타일 */
+        /* 카드 및 테이블 스타일 */
         .card { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); }
         .meal-title { color: var(--accent); font-size: 0.9em; margin-bottom: 5px; font-weight: bold; }
         .meal-menu { font-size: 1.1em; white-space: pre-wrap; line-height: 1.6; }
 
-        /* 조회용 표 스타일 */
         .menu-table { width: 100%; border-collapse: collapse; font-size: 0.85em; table-layout: fixed; }
         .menu-table th, .menu-table td { border: 1px solid var(--border); padding: 8px; text-align: center; vertical-align: middle; white-space: pre-wrap; }
-        .menu-table th { background: var(--accent); color: white; width: 80px; }
-        .menu-table td { min-width: 100px; }
+        .menu-table th { background: var(--accent); color: white; width: 60px; }
 
-        /* 입력용 그리드 스타일 (NEW) */
+        /* 입력 그리드 스타일 */
         .input-grid { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .input-grid th, .input-grid td { border: 1px solid var(--border); padding: 0; margin: 0; }
-        .input-grid th { background: #eee; color: #333; padding: 10px; font-size: 0.9em; width: 60px; }
+        .input-grid th { background: #eee; color: #333; padding: 10px; font-size: 0.9em; width: 60px; text-align: center; }
         
-        /* 입력 필드 스타일 */
         .cell-input { 
-            width: 100%; height: 100%; min-height: 40px; border: none; outline: none; 
+            width: 100%; height: 100%; border: none; outline: none; 
             padding: 8px; box-sizing: border-box; background: var(--input-bg); color: var(--text-color);
-            font-family: inherit; resize: vertical; display: block;
+            font-family: inherit; resize: none; display: block;
         }
         .cell-input:focus { background: rgba(74, 144, 226, 0.1); }
         textarea.cell-input { min-height: 80px; white-space: pre-wrap; }
+        input.cell-input { text-align: center; }
 
-        /* 버튼 및 기타 */
-        .theme-toggle { position: fixed; bottom: 20px; right: 20px; background: var(--card-bg); border: 1px solid var(--border); padding: 10px; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        button.action-btn { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1em; font-weight: bold; margin-top: 10px; }
+        /* 스마트 도구 섹션 */
+        .smart-tools { background: var(--card-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--accent); margin-bottom: 20px; }
+        .tool-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .smart-paste-area { width: 100%; height: 80px; padding: 10px; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; font-size: 0.8em; background: var(--input-bg); color: var(--text-color); }
         
-        .loading { text-align: center; padding: 20px; }
+        button.action-btn { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1em; font-weight: bold; margin-top: 10px; }
+        button.small-btn { padding: 8px 15px; background: var(--accent); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; }
+        
+        .theme-toggle { position: fixed; bottom: 20px; right: 20px; background: var(--card-bg); border: 1px solid var(--border); padding: 10px; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
@@ -73,15 +75,12 @@
 </div>
 
 <div id="next-meal" class="content active">
-    <div id="next-meal-container">
-        <div class="loading">데이터를 불러오는 중...</div>
-    </div>
+    <div id="next-meal-container"><div class="loading">데이터를 불러오는 중...</div></div>
 </div>
 
 <div id="weekly" class="content">
     <div style="overflow-x: auto;">
-        <table class="menu-table" id="weekly-table">
-            </table>
+        <table class="menu-table" id="weekly-table"></table>
     </div>
 </div>
 
@@ -93,77 +92,88 @@
     </div>
 
     <div id="upload-form" style="display:none;">
-        <h3>주간 메뉴 입력</h3>
-        <p style="font-size:0.9em; color:gray; margin-bottom:10px;">
-            각 칸에 내용을 직접 입력하거나 엑셀 내용을 붙여넣으세요.<br>
-            (줄바꿈이 포함된 메뉴도 그대로 입력됩니다.)
-        </p>
+        <h3>주간 메뉴 작성</h3>
+
+        <div class="smart-tools">
+            <div class="tool-row">
+                <label><strong>1. 시작일 설정 (토요일):</strong></label>
+                <input type="date" id="start-date-picker">
+                <button class="small-btn" onclick="autoFillDates()">날짜 자동 채우기</button>
+            </div>
+            <p style="font-size:0.8em; color:gray; margin:0;">* 날짜를 선택하면 자동으로 일주일치 날짜가 계산되어 표에 입력됩니다.</p>
+        </div>
+
+        <div class="smart-tools">
+            <label><strong>2. 식단 한 번에 넣기 (엑셀 붙여넣기):</strong></label>
+            <textarea id="smart-paste-area" class="smart-paste-area" placeholder="엑셀에서 [조식/중식/석식] x [7일] 데이터(3행 7열)만 복사해서 여기에 붙여넣고 아래 버튼을 누르세요."></textarea>
+            <button class="small-btn" onclick="applySmartPaste()">표에 적용하기</button>
+        </div>
 
         <div style="overflow-x: auto;">
             <table class="input-grid" id="edit-table">
-                <tr>
+                <tr id="row-date">
                     <th>날짜</th>
-                    <td><input class="cell-input" placeholder="00월00일"></td>
-                    <td><input class="cell-input" placeholder="00월00일"></td>
-                    <td><input class="cell-input" placeholder="00월00일"></td>
-                    <td><input class="cell-input" placeholder="00월00일"></td>
-                    <td><input class="cell-input" placeholder="00월00일"></td>
-                    <td><input class="cell-input" placeholder="00월00일"></td>
-                    <td><input class="cell-input" placeholder="00월00일"></td>
+                    <td><input class="cell-input date-cell" placeholder="00월00일"></td>
+                    <td><input class="cell-input date-cell" placeholder="00월00일"></td>
+                    <td><input class="cell-input date-cell" placeholder="00월00일"></td>
+                    <td><input class="cell-input date-cell" placeholder="00월00일"></td>
+                    <td><input class="cell-input date-cell" placeholder="00월00일"></td>
+                    <td><input class="cell-input date-cell" placeholder="00월00일"></td>
+                    <td><input class="cell-input date-cell" placeholder="00월00일"></td>
                 </tr>
                 <tr>
                     <th>요일</th>
-                    <td><input class="cell-input" value="토"></td>
-                    <td><input class="cell-input" value="일"></td>
-                    <td><input class="cell-input" value="월"></td>
-                    <td><input class="cell-input" value="화"></td>
-                    <td><input class="cell-input" value="수"></td>
-                    <td><input class="cell-input" value="목"></td>
-                    <td><input class="cell-input" value="금"></td>
+                    <td><input class="cell-input" value="토" readonly style="background:#f9f9f9; text-align:center;"></td>
+                    <td><input class="cell-input" value="일" readonly style="background:#f9f9f9; text-align:center;"></td>
+                    <td><input class="cell-input" value="월" readonly style="background:#f9f9f9; text-align:center;"></td>
+                    <td><input class="cell-input" value="화" readonly style="background:#f9f9f9; text-align:center;"></td>
+                    <td><input class="cell-input" value="수" readonly style="background:#f9f9f9; text-align:center;"></td>
+                    <td><input class="cell-input" value="목" readonly style="background:#f9f9f9; text-align:center;"></td>
+                    <td><input class="cell-input" value="금" readonly style="background:#f9f9f9; text-align:center;"></td>
                 </tr>
-                <tr>
+                <tr id="row-bf">
                     <th>조식</th>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
                 </tr>
-                <tr>
+                <tr id="row-lh">
                     <th>중식</th>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
                 </tr>
-                <tr>
+                <tr id="row-dn">
                     <th>석식</th>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
-                    <td><textarea class="cell-input"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
+                    <td><textarea class="cell-input meal-cell"></textarea></td>
                 </tr>
             </table>
         </div>
 
-        <button class="action-btn" onclick="uploadMenuFromGrid()">업로드 하기</button>
+        <button class="action-btn" onclick="uploadMenuFromGrid()">서버에 저장하기</button>
     </div>
 </div>
 
 <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
 
 <script>
-    // ▼▼▼ 여기에 본인의 웹 앱 URL을 넣으세요 ▼▼▼
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby...YOUR_URL.../exec'; 
-    
+    // ▼▼▼ 본인의 웹 앱 URL 입력 ▼▼▼
+    const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec'; 
+
     let globalMenuData = null;
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -171,7 +181,6 @@
         applyTheme();
     });
 
-    // 데이터 가져오기
     function fetchData() {
         fetch(SCRIPT_URL)
             .then(res => res.json())
@@ -185,11 +194,10 @@
                 }
             })
             .catch(err => {
-                document.getElementById('next-meal-container').innerHTML = '<div class="card">데이터 로드 실패</div>';
+                document.getElementById('next-meal-container').innerHTML = '<div class="card">데이터 로드 실패 (새로고침 해주세요)</div>';
             });
     }
 
-    // 탭 전환
     function switchTab(tabId) {
         document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -197,7 +205,72 @@
         event.target.classList.add('active');
     }
 
-    // [탭 1] 다음 식사 (로직 동일)
+    // [기능 1] 날짜 자동 계산
+    function autoFillDates() {
+        const picker = document.getElementById('start-date-picker');
+        if(!picker.value) {
+            alert('날짜를 선택해주세요.');
+            return;
+        }
+
+        const dateCells = document.querySelectorAll('.date-cell');
+        let currentDate = new Date(picker.value);
+
+        // 요일 체크 (토요일인지)
+        if(currentDate.getDay() !== 6) {
+            if(!confirm('선택한 날짜가 토요일이 아닙니다. 그래도 진행할까요?')) return;
+        }
+
+        // 7일치 루프 (자바스크립트 Date 객체는 자동으로 월/년 넘어감 처리)
+        dateCells.forEach(cell => {
+            const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+            const day = currentDate.getDate().toString().padStart(2, '0');
+            cell.value = `${month}월${day}일`;
+            
+            // 하루 증가
+            currentDate.setDate(currentDate.getDate() + 1);
+        });
+    }
+
+    // [기능 2] 스마트 붙여넣기 (파싱 로직)
+    function applySmartPaste() {
+        const rawText = document.getElementById('smart-paste-area').value;
+        if(!rawText.trim()) {
+            alert('붙여넣을 내용이 없습니다.');
+            return;
+        }
+
+        // 줄바꿈으로 행 분리
+        const rows = rawText.trim().split('\n');
+        
+        // 입력 대상 행들 (조식, 중식, 석식)
+        const targetRowIds = ['row-bf', 'row-lh', 'row-dn'];
+
+        // 엑셀에서 복사하면 탭(\t)으로 열이 구분됨
+        let rowCount = 0;
+        rows.forEach((rowStr) => {
+            if(rowCount >= 3) return; // 3끼니만 처리
+
+            const cols = rowStr.split('\t');
+            // 해당 행의 입력칸들 찾기
+            const targetRow = document.getElementById(targetRowIds[rowCount]);
+            const inputs = targetRow.querySelectorAll('textarea');
+
+            // 각 칸에 값 넣기 (최대 7개)
+            cols.forEach((val, idx) => {
+                if(idx < 7 && inputs[idx]) {
+                    // 따옴표 제거 등 깔끔하게 정리
+                    let cleanVal = val.replace(/^"|"$/g, '').trim(); 
+                    inputs[idx].value = cleanVal;
+                }
+            });
+            rowCount++;
+        });
+
+        alert('표에 적용되었습니다. 내용을 확인하고 수정하세요.');
+    }
+
+    // 기존 로직들 (렌더링, 업로드 등)
     function renderNextMeal() {
         const now = new Date();
         const currentHour = now.getHours();
@@ -226,7 +299,6 @@
         }
 
         let mealsToShow = [];
-        
         if (currentMealType <= 1) { 
             mealsToShow.push(getMealInfo(dayIdx, 2)); 
             mealsToShow.push(getMealInfo(dayIdx, 3)); 
@@ -258,7 +330,6 @@
         });
     }
 
-    // [탭 2] 주간 메뉴 테이블
     function renderWeeklyTable() {
         const table = document.getElementById('weekly-table');
         let html = '';
@@ -273,7 +344,6 @@
         table.innerHTML = html;
     }
 
-    // [탭 3] 관리자 및 업로드 (그리드 수집 방식)
     function checkLogin() {
         const pw = document.getElementById('admin-pw').value;
         if(pw === 'fgip.admin') {
@@ -285,40 +355,33 @@
     }
 
     function uploadMenuFromGrid() {
-        // 5행 8열 데이터 수집
         const table = document.getElementById('edit-table');
         const rows = table.querySelectorAll('tr');
         let data = [];
 
-        // 헤더 텍스트 (고정값)
+        // 헤더 텍스트
         const rowHeaders = ["(공란)", "(공란)", "조식", "중식", "석식"];
 
         rows.forEach((tr, rIdx) => {
             let rowData = [];
-            
-            // 첫 열 (헤더) 추가
             rowData.push(rowHeaders[rIdx]);
-
-            // 나머지 7개 열(입력값) 가져오기
             const inputs = tr.querySelectorAll('.cell-input');
             inputs.forEach(input => {
-                rowData.push(input.value); // 줄바꿈(\n)도 그대로 가져옵니다.
+                rowData.push(input.value);
             });
-
             data.push(rowData);
         });
 
-        if(!confirm('작성한 내용으로 업데이트 하시겠습니까?')) return;
+        if(!confirm('이대로 서버에 저장하시겠습니까?')) return;
 
-        // 전송
         fetch(SCRIPT_URL, {
             method: 'POST',
-            body: JSON.stringify(data) // 2차원 배열 전송
+            body: JSON.stringify(data)
         })
         .then(res => res.json())
         .then(resData => {
             if(resData.result === 'success') {
-                alert('업로드 성공! 적용됩니다.');
+                alert('저장 완료! 페이지를 새로고침합니다.');
                 location.reload();
             } else {
                 alert('오류: ' + resData.message);
