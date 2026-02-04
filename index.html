@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>주간 급식 공지 플랫폼</title>
+    <title>주간 식사 메뉴 공지 플랫폼</title>
     <style>
         :root {
             --bg-color: #f8f9fa;
@@ -87,7 +87,7 @@
 
 <div id="next-meal" class="content active">
     <div id="next-meal-container">
-        <div class="loading">⏳ 급식 정보를 불러오는 중입니다...</div>
+        <div class="loading">⏳ 식사 정보를 불러오는 중입니다...</div>
     </div>
 </div>
 
@@ -261,7 +261,7 @@
                 targets.push({c: nextCol, r: 2, l: "내일 아침 식사"});
                 targets.push({c: nextCol, r: 3, l: "내일 점심 식사"});
             } else {
-                targets.push({c: 0, r: 0, l: "이번 주 급식 종료", msg: "다음 주 메뉴를 기다려주세요!"});
+                targets.push({c: 0, r: 0, l: "이번 주 식사 종료", msg: "다음 주 메뉴를 기다려주세요!"});
             }
         }
 
@@ -426,5 +426,6 @@
 </script>
 </body>
 </html>
+
 
 
