@@ -369,9 +369,13 @@
 
         // [보안] 비밀번호와 데이터를 함께 전송
         fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ password: password, menuData: menuData })
-        })
+    method: 'POST',
+    redirect: "follow",    // 중요: 구글의 리디렉션을 따라가라
+    headers: {
+        "Content-Type": "text/plain;charset=utf-8", // 중요: JSON이라고 하면 차단당함. 텍스트라고 뻥을 쳐야 함.
+    },
+    body: JSON.stringify({ password: password, menuData: menuData })
+})
         .then(res => res.json())
         .then(data => {
             if(data.result === 'success') {
@@ -408,3 +412,4 @@
 </script>
 </body>
 </html>
+
