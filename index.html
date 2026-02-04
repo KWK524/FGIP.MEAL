@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>주간 급식 공지</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --card-bg: #ffffff;
+            --accent: #4a90e2;
+            --border: #ddd;
+        }
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --card-bg: #2d2d2d;
+            --accent: #64b5f6;
+            --border: #444;
+        }
+        body { margin: 0; font-family: 'Pretendard', sans-serif; background: var(--bg-color); color: var(--text-color); transition: 0.3s; }
+        
+        /* 탭 네비게이션 */
+        .tabs { display: flex; background: var(--card-bg); position: sticky; top: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 100; }
+        .tab-btn { flex: 1; padding: 15px; border: none; background: transparent; color: var(--text-color); font-weight: bold; cursor: pointer; border-bottom: 3px solid transparent; }
+        .tab-btn.active { border-bottom-color: var(--accent); color: var(--accent); }
+
+        /* 컨텐츠 영역 */
+        .content { padding: 20px; max-width: 800px; margin: 0 auto; display: none; }
+        .content.active { display: block; }
+
+        /* 카드 스타일 */
+        .card { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border); }
+        .meal-title { color: var(--accent); font-size: 0.9em; margin-bottom: 5px; font-weight: bold; }
+        .meal-menu { font-size: 1.1em; white-space: pre-line; line-height: 1.5; }
+
+        /* 표 스타일 */
+        .menu-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+        .menu-table th, .menu-table td { border: 1px solid var(--border); padding: 8px; text-align: center; }
+        .menu-table th { background: var(--accent); color: white; }
+
+        /* 관리자 & 토글 */
+        .theme-toggle { position: fixed; bottom: 20px; right: 20px; background: var(--card-bg); border: 1px solid var(--border); padding: 10px; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        textarea { width: 100%; height: 150px; margin-bottom: 10px; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border); }
+        button.action-btn { width: 100%; padding: 12px; background: var(--accent); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; }
+        
+        .loading { text-align: center; padding: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('next-meal')">다음 식사</button>
+    <button class="tab-btn" onclick="switchTab('weekly')">주간 메뉴</button>
+    <button class="tab-btn" onclick="switchTab('upload')">메뉴 업로드</button>
+</div>
+
+<div id="next-meal" class="content active">
+    <div id="next-meal-container">
+        <div class="loading">데이터를 불러오는 중...</div>
+    </div>
+</div>
+
+<div id="weekly" class="content">
+    <div style="overflow-x: auto;">
+        <table class="menu-table" id="weekly-table">
+            </table>
+    </div>
+</div>
+
+<div id="upload" class="content">
+    <div id="login-form">
+        <h3>관리자 로그인</h3>
+        <input type="password" id="admin-pw" placeholder="비밀번호 입력" style="padding:10px; width:80%; margin-bottom:10px;">
+        <button class="action-btn" onclick="checkLogin()">로그인</button>
+    </div>
+    <div id="upload-form" style="display:none;">
+        <h3>엑셀 데이터 붙여넣기</h3>
+        <p style="font-size:0.8em; color:gray;">엑셀에서 5행 8열(공란+날짜 포함) 전체를 복사해서 아래에 붙여넣으세요.</p>
+        <textarea id="paste-area" placeholder="여기에 붙여넣기..."></textarea>
+        <button class="action-btn" onclick="uploadMenu()">업로드 하기</button>
+    </div>
+</div>
+
+<button class="theme-toggle" onclick="toggleTheme()">🌓</button>
+
+<script>
+    // ▼▼▼ 여기에 배포한 웹 앱 URL을 넣으세요 ▼▼▼
+    const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+    
+    let globalMenuData = null; // [5][8] 배열
+
+    // 초기화
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchData();
+        applyTheme();
+    });
+
+    // 데이터 가져오기
+    function fetchData() {
+        fetch(SCRIPT_URL)
+            .then(res => res.json())
+            .then(data => {
+                globalMenuData = data.menu;
+                if(globalMenuData.length > 0) {
+                    renderNextMeal();
+                    renderWeeklyTable();
+                } else {
+                    document.getElementById('next-meal-container').innerHTML = '<div class="card">등록된 메뉴가 없습니다.</div>';
+                }
+            })
+            .catch(err => alert('데이터 로드 실패: ' + err));
+    }
+
+    // 탭 전환
+    function switchTab(tabId) {
+        document.querySelectorAll('.content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    // [탭 1] 다음 식사 로직
+    function renderNextMeal() {
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentDay = now.getDay(); // 0(일)~6(토)
+        
+        // 데이터 구조: Col 0=라벨, 1=토, 2=일, 3=월, 4=화, 5=수, 6=목, 7=금
+        // JS getDay(): 6=토, 0=일, 1=월...
+        // 매핑: 토(6)->idx 1, 일(0)->idx 2, 월(1)->idx 3 ... 금(5)->idx 7
+        let dayIdx = currentDay === 6 ? 1 : currentDay + 2;
+        if (dayIdx > 7) dayIdx = 2; // 일요일 보정
+
+        // 식사 인덱스: 2=조식, 3=중식, 4=석식
+        let currentMealType = -1; // 0:조식전, 1:조식중, 2:중식전, 3:중식중, 4:석식전, 5:석식중, 6:석식후
+
+        // 시간 로직 (조식 05-06, 중식 12-13, 석식 18-20)
+        if (currentHour < 5) currentMealType = 0; // 조식 전
+        else if (currentHour < 6) currentMealType = 1; // 조식 중
+        else if (currentHour < 12) currentMealType = 2; // 중식 전
+        else if (currentHour < 13) currentMealType = 3; // 중식 중
+        else if (currentHour < 18) currentMealType = 4; // 석식 전
+        else if (currentHour < 20) currentMealType = 5; // 석식 중
+        else currentMealType = 6; // 석식 후 (내일 조식)
+
+        const container = document.getElementById('next-meal-container');
+        container.innerHTML = '';
+
+        // 표시할 식사 순서 계산 함수
+        function getMealInfo(dIdx, typeRow) {
+            // 날짜/요일 가져오기
+            const dateStr = globalMenuData[0][dIdx] + " (" + globalMenuData[1][dIdx] + ")";
+            const typeStr = globalMenuData[typeRow][0]; // 조/중/석 텍스트
+            const menuStr = globalMenuData[typeRow][dIdx];
+            return { date: dateStr, type: typeStr, menu: menuStr };
+        }
+
+        let mealsToShow = [];
+
+        // 로직: 현재 시간에 따라 "이번 식사"와 "다음 식사" 결정
+        // typeRow: 2=조식, 3=중식, 4=석식
+        
+        if (currentMealType <= 1) { // 조식 타임 or 전
+            mealsToShow.push(getMealInfo(dayIdx, 2)); // 오늘 조식
+            mealsToShow.push(getMealInfo(dayIdx, 3)); // 오늘 중식
+        } else if (currentMealType <= 3) { // 중식 타임 or 전
+            mealsToShow.push(getMealInfo(dayIdx, 3)); // 오늘 중식
+            mealsToShow.push(getMealInfo(dayIdx, 4)); // 오늘 석식
+        } else if (currentMealType <= 5) { // 석식 타임 or 전
+            mealsToShow.push(getMealInfo(dayIdx, 4)); // 오늘 석식
+            // 내일 조식 (토요일->일요일, 금요일->다음주 토요일?? 일단 순환 로직은 복잡하니 금요일이면 끝으로 처리하거나 다음 인덱스)
+            let nextDayIdx = dayIdx + 1;
+            if(nextDayIdx <= 7) mealsToShow.push(getMealInfo(nextDayIdx, 2));
+            else mealsToShow.push({date: "다음 주", type: "조식", menu: "업로드 대기중"}); 
+        } else { // 석식 이후
+             let nextDayIdx = dayIdx + 1;
+            if(nextDayIdx <= 7) {
+                mealsToShow.push(getMealInfo(nextDayIdx, 2)); // 내일 조식
+                mealsToShow.push(getMealInfo(nextDayIdx, 3)); // 내일 중식
+            } else {
+                 mealsToShow.push({date: "다음 주", type: "조식", menu: "식단표 업데이트 필요"});
+            }
+        }
+
+        // 렌더링
+        mealsToShow.forEach((m, i) => {
+            const label = i === 0 ? (currentHour >= 5 && currentHour < 20 && ![2,4,6].includes(currentMealType) ? "진행 중인 식사" : "곧 다가오는 식사") : "그 다음 식사";
+            container.innerHTML += `
+                <div class="card">
+                    <div class="meal-title">${label} - ${m.date} ${m.type}</div>
+                    <div class="meal-menu">${m.menu || '-'}</div>
+                </div>
+            `;
+        });
+    }
+
+    // [탭 2] 주간 메뉴 테이블 렌더링
+    function renderWeeklyTable() {
+        const table = document.getElementById('weekly-table');
+        let html = '';
+        globalMenuData.forEach(row => {
+            html += '<tr>';
+            row.forEach((cell, i) => {
+                const tag = (i === 0 || row === globalMenuData[0] || row === globalMenuData[1]) ? 'th' : 'td';
+                html += `<${tag}>${cell}</${tag}>`;
+            });
+            html += '</tr>';
+        });
+        table.innerHTML = html;
+    }
+
+    // [탭 3] 관리자 기능
+    function checkLogin() {
+        const pw = document.getElementById('admin-pw').value;
+        if(pw === 'fgip.admin') {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('upload-form').style.display = 'block';
+        } else {
+            alert('비밀번호가 틀렸습니다.');
+        }
+    }
+
+    function uploadMenu() {
+        const raw = document.getElementById('paste-area').value;
+        if(!raw) return;
+
+        // 엑셀 붙여넣기 파싱 (탭 문자로 분리)
+        const rows = raw.trim().split('\n').map(r => r.split('\t'));
+        
+        // 데이터 정제 (빈 셀 처리 등)
+        if(rows.length !== 5) {
+            alert('행 개수가 5개가 아닙니다. 빈 줄이나 형식을 확인해주세요.');
+            return;
+        }
+
+        if(!confirm('기존 메뉴 위에 새로운 메뉴를 업데이트 하시겠습니까?')) return;
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify(rows)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.result === 'success') {
+                alert('업로드 성공! 페이지를 새로고침합니다.');
+                location.reload();
+            } else {
+                alert('오류 발생: ' + data.message);
+            }
+        })
+        .catch(err => alert('업로드 통신 오류: ' + err));
+    }
+
+    // [공통] 다크모드
+    function toggleTheme() {
+        const isDark = document.body.getAttribute('data-theme') === 'dark';
+        document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        localStorage.setItem('theme', isDark ? 'light' : 'dark');
+    }
+
+    function applyTheme() {
+        const saved = localStorage.getItem('theme');
+        if (saved) document.body.setAttribute('data-theme', saved);
+    }
+</script>
+</body>
+</html>
