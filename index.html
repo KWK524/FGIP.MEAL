@@ -188,7 +188,7 @@
 
 <script>
     // ▼▼▼ 여기에 반드시 [새 배포] 후 얻은 URL을 넣으세요 ▼▼▼
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxteDkVkQxGEw7KUpJMh1Zdgh9wjj0sdo7h-qDSqkNofbQydBTHEOzmipP8nmXSlfumNg/exec'; 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxRVKkLZ5vkaKqfZiuPdgYCfKKAbjHht_WcfnHA-DCG-2KGDeTvxlrxSpiHrnoJfzYgyA/exec'; 
 
     let globalMenuData = null;
 
@@ -284,14 +284,28 @@
         });
     }
 
+    // [탭 2] 주간 메뉴 테이블 렌더링 (쉼표 -> 줄바꿈 변환 적용)
     function renderWeeklyTable() {
         const table = document.getElementById('weekly-table');
         let html = '';
+
         globalMenuData.forEach((row, rIdx) => {
             html += '<tr>';
             row.forEach((cell, cIdx) => {
-                const tag = (cIdx === 0 || rIdx <= 1) ? 'th' : 'td';
-                html += `<${tag}>${cell}</${tag}>`;
+                // 헤더(th)인지 데이터(td)인지 구분
+                // 0번째 열(구분), 0번째 행(날짜), 1번째 행(요일)은 헤더
+                const isHeader = (cIdx === 0 || rIdx <= 1);
+                const tag = isHeader ? 'th' : 'td';
+                
+                let content = cell;
+
+                // 데이터 셀(td)인 경우에만 쉼표(,)를 줄바꿈(<br>)으로 변경
+                if (!isHeader && content) {
+                    // 정규식 설명: 쉼표(,) 뒤에 공백이 있든 없든 싹 다 잡아서 <br>로 바꿈
+                    content = content.replace(/,\s*/g, '<br>');
+                }
+
+                html += `<${tag}>${content}</${tag}>`;
             });
             html += '</tr>';
         });
@@ -412,4 +426,5 @@
 </script>
 </body>
 </html>
+
 
