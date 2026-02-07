@@ -369,7 +369,7 @@
         // 데이터 수집 (5행 8열)
         const trs = document.querySelectorAll('#edit-table tr');
         let menuData = [];
-        const headers = ["(공란)", "(공란)", "조식", "중식", "석식"]; // 1열 라벨
+        const headers = ["날짜", "요일", "조식", "중식", "석식"]; // 1열 라벨
 
         trs.forEach((tr, i) => {
             let row = [headers[i]]; // 1열은 자동생성
@@ -426,6 +426,7 @@
 </script>
 </body>
 </html>
+
 
 
 
